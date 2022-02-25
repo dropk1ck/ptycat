@@ -6,7 +6,8 @@ Aren't you tired of catching netcat/bash callbacks and forgetting how to muck wi
 ```go get github.com/dropk1ck/ptycat```
 
 ### Usage
-```ptycat -p <port to listen on>
+```
+ptycat -p <port to listen on>
 
 # ensure you use a reverse shell that spawns a pty on the remote end, like this:
 # find more examples at revshells.com
