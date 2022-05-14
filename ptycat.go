@@ -2,14 +2,15 @@ package main
 
 import (
     "flag"
-    "fmt"
     "io"
     "net"
     "os"
     "strconv"
-    "github.com/sirupsen/logrus"
+    "github.com/dropk1ck/pwnlog"
     "golang.org/x/crypto/ssh/terminal"
 )
+
+var logger *pwnlog.Logger
 
 
 func main() {
@@ -23,13 +24,11 @@ func main() {
     flag.Parse()
 
     // default to info-level debugging, 'verbose' turns on debug output
-    level := "info"
+    logLevel := pwnlog.InfoLevel 
     if verboseMode {
-        level = "debug"
+        logLevel = pwnlog.DebugLevel 
     }
-    logLevel, _ := logrus.ParseLevel(level)
-    logrus.SetLevel(logLevel)
-
+    logger = pwnlog.New(logLevel)   
     args := flag.Args()
 
     // argument sanity checks
@@ -40,7 +39,7 @@ func main() {
 
     if listenMode && (len(args) == 2) {
         // choose a mode, not both
-        fmt.Println("Must choose either listen mode or connect mode, not both")
+        logger.Error("Must choose either listen mode or connect mode, not both")
         flag.Usage()
         return
     }
@@ -54,10 +53,10 @@ func main() {
     }
 
     // either way we're now connected, setup terminal
-    logrus.Debug("Creating raw terminal, happy hacking")
-    oldState, e := terminal.MakeRaw(int(os.Stdin.Fd()))
-    if e != nil {
-        logrus.Fatal(e)
+    logger.Debug("Creating raw terminal, happy hacking")
+    oldState, err := terminal.MakeRaw(int(os.Stdin.Fd()))
+    if err != nil {
+        logger.Fatal(err.Error())
     }
    
     // automatically restore terminal settings on exit
@@ -65,15 +64,16 @@ func main() {
 
     // we're off to the races
     go func() { _, _ = io.Copy(os.Stdout, conn) }()
-    _, e = io.Copy(conn, os.Stdin)
+    _, err = io.Copy(conn, os.Stdin)
 
+    logger.Debug("Lost remote terminal")
 }
 
 // simple TCP connect to specified addr/port combo
 func doConnect(args []string) net.Conn {
     conn, err := net.Dial("tcp", args[0]+":"+args[1])
     if err != nil {
-        logrus.Fatal(err)
+        logger.Fatal(err.Error())
     }
     return conn
 }
@@ -81,16 +81,16 @@ func doConnect(args []string) net.Conn {
 // listen on all interfaces on specified port
 func doListen(listenPort int) net.Conn {
     listenPortStr := strconv.Itoa(listenPort)
-    logrus.Debug("Listening on port " + listenPortStr)
-    ln, e := net.Listen("tcp", ":"+listenPortStr)
-    if e != nil {
-        logrus.Fatal(e)        
+    logger.Debug("Listening on port " + listenPortStr)
+    ln, err := net.Listen("tcp", ":"+listenPortStr)
+    if err != nil {
+        logger.Fatal(err.Error())        
     }
 
-    conn, e := ln.Accept()
-    if e != nil {
-        logrus.Fatal(e)
+    conn, err := ln.Accept()
+    if err != nil {
+        logger.Fatal(err.Error())
     }
-    logrus.Debug("Accepted connection")
+    logger.Debug("Accepted connection")
     return conn
 }
